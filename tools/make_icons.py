@@ -12,10 +12,10 @@ RES = os.path.join(ROOT, "app", "src", "main", "res")
 SS = 4  # 超采样倍数
 BG_TOP = "#1B2E49"
 BG_BOTTOM = "#070D18"
-AMBER = "#FFB454"
-AMBER_DARK = "#C77F24"
-FUSE = "#B06A18"
-SPARK = "#FFF4D9"
+AMBER = "#F7A93F"
+AMBER_DARK = "#A56012"
+FUSE = "#8A5510"
+SPARK = "#FFF0C9"
 
 DENSITIES = {
     "mdpi": 48,
@@ -61,49 +61,54 @@ def draw_bomb(img, cx, cy, r, fuse_tip=(1.45, -1.75)):
     img.alpha_composite(shadow)
 
     d = ImageDraw.Draw(img)
-    # 八根刺
-    spike_w = max(2, int(r * 0.2))
+    # 八根短刺，避免看起来像太阳
+    spike_w = max(2, int(r * 0.24))
     for i in range(8):
         angle = math.radians(i * 45)
-        x1 = cx + math.cos(angle) * r * 0.8
-        y1 = cy + math.sin(angle) * r * 0.8
-        x2 = cx + math.cos(angle) * r * 1.5
-        y2 = cy + math.sin(angle) * r * 1.5
+        x1 = cx + math.cos(angle) * r * 0.95
+        y1 = cy + math.sin(angle) * r * 0.95
+        x2 = cx + math.cos(angle) * r * 1.33
+        y2 = cy + math.sin(angle) * r * 1.33
         d.line([x1, y1, x2, y2], fill=AMBER_DARK, width=spike_w)
         d.ellipse([x2 - spike_w / 2, y2 - spike_w / 2,
                    x2 + spike_w / 2, y2 + spike_w / 2], fill=AMBER_DARK)
 
     # 引线
-    p0 = (cx + r * 0.5, cy - r * 0.82)
-    p1 = (cx + r * 0.62, cy + r * fuse_tip[1] * 0.9)
+    p0 = (cx + r * 0.45, cy - r * 0.87)
+    p1 = (cx + r * 0.58, cy + r * fuse_tip[1] * 0.9)
     p2 = (cx + r * fuse_tip[0], cy + r * fuse_tip[1])
     fuse_pts = quadratic(p0, p1, p2)
-    fuse_w = max(2, int(r * 0.17))
+    fuse_w = max(2, int(r * 0.21))
     d.line(fuse_pts, fill=FUSE, width=fuse_w, joint="curve")
     d.ellipse([p0[0] - fuse_w / 2, p0[1] - fuse_w / 2,
                p0[0] + fuse_w / 2, p0[1] + fuse_w / 2], fill=FUSE)
 
-    # 火花
+    # 火花：一颗小火星，而不是长芒星
     sx, sy = p2
-    star_r = r * 0.42
-    star = []
-    for i in range(8):
-        a = math.radians(i * 45)
-        length = star_r if i % 2 == 0 else star_r * 0.34
-        star.append((sx + math.cos(a) * length, sy + math.sin(a) * length))
-    d.polygon(star, fill=SPARK)
-    d.ellipse([sx - star_r * 0.2, sy - star_r * 0.2,
-               sx + star_r * 0.2, sy + star_r * 0.2], fill="#FFFFFF")
+    d.ellipse([sx - r * 0.16, sy - r * 0.16, sx + r * 0.16, sy + r * 0.16],
+              fill=SPARK)
+    for i in range(4):
+        a = math.radians(i * 90 + 45)
+        d.line([sx + math.cos(a) * r * 0.14, sy + math.sin(a) * r * 0.14,
+                sx + math.cos(a) * r * 0.38, sy + math.sin(a) * r * 0.38],
+               fill=SPARK, width=max(2, int(r * 0.07)))
 
-    # 雷体
-    d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=AMBER,
+    # 雷体：上亮下暗的球面感
+    body = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    grad = Image.linear_gradient("L").resize((size, size), Image.LANCZOS)
+    body_colour = ImageOps.colorize(grad, black="#FFC974", white="#E28B26").convert("RGBA")
+    body_mask = Image.new("L", (size, size), 0)
+    ImageDraw.Draw(body_mask).ellipse([cx - r, cy - r, cx + r, cy + r], fill=255)
+    body.paste(body_colour, (0, 0), body_mask)
+    img.alpha_composite(body)
+    d.ellipse([cx - r, cy - r, cx + r, cy + r],
               outline=AMBER_DARK, width=max(2, int(r * 0.07)))
 
     # 高光
     hl = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     hd = ImageDraw.Draw(hl)
-    hd.ellipse([cx - r * 0.62, cy - r * 0.62, cx - r * 0.06, cy - r * 0.06],
-               fill=(255, 255, 255, 95))
+    hd.ellipse([cx - r * 0.5, cy - r * 0.5, cx - r * 0.18, cy - r * 0.18],
+               fill=(255, 255, 255, 80))
     img.alpha_composite(hl)
 
 
@@ -148,14 +153,16 @@ def main():
         os.makedirs(folder, exist_ok=True)
         make_foreground(size).save(os.path.join(folder, "ic_launcher_foreground.png"))
 
-    # 预览图（不参与打包）
-    preview = Image.new("RGBA", (460, 220), (10, 16, 26, 255))
-    big = make_legacy(192, False)
-    round_big = make_legacy(192, True)
-    fg = make_foreground(216)
-    preview.alpha_composite(big, (20, 14))
-    preview.alpha_composite(round_big, (234, 14))
-    preview.alpha_composite(fg, (234, 14))
+    # 预览图（不参与打包）：方形 / 圆形 / 自适应图标（圆形裁切）
+    preview = Image.new("RGBA", (680, 230), (9, 15, 24, 255))
+    preview.alpha_composite(make_legacy(192, False), (20, 19))
+    preview.alpha_composite(make_legacy(192, True), (236, 19))
+    tile = Image.new("RGBA", (216, 216), (11, 20, 34, 255))
+    tile.alpha_composite(make_foreground(216), (0, 0))
+    mask = Image.new("L", (216, 216), 0)
+    ImageDraw.Draw(mask).ellipse([0, 0, 215, 215], fill=255)
+    tile.putalpha(mask)
+    preview.alpha_composite(tile, (444, 7))
     preview.save(os.path.join(ROOT, "icon-preview.png"))
     print("icons generated")
 
