@@ -41,7 +41,20 @@ public class GameTest {
                 assertFalse("第一下不能是雷", g.isMine[tap]);
                 assertEquals(Game.REVEALED, g.state[tap]);
                 assertEquals("第一下周围必须是空的", 0, g.around[tap]);
-                assertTrue("第一下应该展开一片", g.revealedCount >= 9);
+                int tapRow = tap / g.cols;
+                int tapCol = tap % g.cols;
+                int neighbourhood = 0;
+                for (int dr = -1; dr <= 1; dr++) {
+                    for (int dc = -1; dc <= 1; dc++) {
+                        if (g.inside(tapRow + dr, tapCol + dc)) {
+                            neighbourhood++;
+                            assertEquals("第一下周围的安全格要全部翻开", Game.REVEALED,
+                                    g.state[g.index(tapRow + dr, tapCol + dc)]);
+                        }
+                    }
+                }
+                assertTrue("第一下至少展开 " + neighbourhood + " 格",
+                        g.revealedCount >= neighbourhood);
                 assertEquals(level.mines, countMines(g));
                 assertEquals(0, g.flaggedCount);
             }
