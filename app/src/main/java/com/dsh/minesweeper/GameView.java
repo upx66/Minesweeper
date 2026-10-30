@@ -36,7 +36,7 @@ public class GameView extends View {
     private static final int COLOR_TEXT = 0xFFEAF1FC;
     private static final int COLOR_TEXT_SECONDARY = 0xFF8EA1BF;
     private static final int COLOR_TEXT_MUTED = 0xFF5C6F8C;
-    private static final int COLOR_TEXT_FAINT = 0xFF43536B;
+    private static final int COLOR_TEXT_FAINT = 0xFF54657E;
     private static final int COLOR_ACCENT = 0xFFFFB454;
     private static final int COLOR_ACCENT_DARK = 0xFF241705;
     private static final int COLOR_SURFACE = 0xFF121D30;

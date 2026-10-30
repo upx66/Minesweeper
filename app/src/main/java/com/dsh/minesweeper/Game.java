@@ -11,7 +11,7 @@ public final class Game {
 
     public enum Level {
         EASY("初级", 9, 9, 10),
-        MEDIUM("中级", 12, 16, 30),
+        MEDIUM("中级", 12, 18, 36),
         HARD("高级", 16, 24, 80);
 
         public final String label;
